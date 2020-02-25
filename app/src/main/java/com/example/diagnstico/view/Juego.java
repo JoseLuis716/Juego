@@ -1,14 +1,17 @@
 package com.example.diagnstico.view;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -18,8 +21,16 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.diagnstico.R;
+import com.example.diagnstico.SQLite.JugadoresSQLiteHelper;
 import com.example.diagnstico.controller.CRUDJugador;
 import com.example.diagnstico.model.Jugador;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import io.realm.Realm;
 
@@ -28,6 +39,7 @@ public class Juego extends AppCompatActivity {
     TextView timer;
     TextView Score;
     Window windows;
+    SQLiteDatabase db;
    CountDownTimer miCronometro;
     int tiempo =60;
     int puntuacion = 0,maximaPuntuacion=0;
@@ -36,6 +48,7 @@ public class Juego extends AppCompatActivity {
     ImageView balon;
     private Realm realm;
     Jugador jugador;
+    FirebaseFirestore dbFire;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,6 +66,13 @@ public class Juego extends AppCompatActivity {
         Drawable myDrawable = getResources().getDrawable(R.drawable.balon);
         balon.setImageDrawable(myDrawable);
         realm = Realm.getDefaultInstance();
+
+        // base de datos SQLite
+        JugadoresSQLiteHelper jugadoresDB = new JugadoresSQLiteHelper(this,"jugadores",null,1);
+         db = jugadoresDB.getWritableDatabase();
+
+         //FIREBASE
+         dbFire = FirebaseFirestore.getInstance();
 
         try {
 
@@ -86,6 +106,43 @@ public class Juego extends AppCompatActivity {
         CRUDJugador.addBestScore(jugador);
         //Toast.makeText(getApplicationContext(),"Puntuacion guardada",Toast.LENGTH_LONG).show();
     }
+    private void agregarJugadorConSqlite(String nombre, int puntos){
+        try {
+        if (db != null){
+            db.execSQL("INSERT into jugadores (nombre , puntuacion) VALUES ('"+nombre+"' , "+puntos+")");
+            db.close();
+          //  Toast.makeText(getApplicationContext(),"HRecord agregado correctamente SQLITE ",Toast.LENGTH_LONG).show();
+        }
+        }catch(Exception e){
+            Toast.makeText(getApplicationContext(),"Ha ocurrido un error por "+e,Toast.LENGTH_LONG).show();
+        }
+    }
+    private void agregarConFirebase(String nombre, int puntos)
+    {
+        // Create a new user with a first and last name
+        Map<String, Object> user = new HashMap<>();
+        user.put("nombre", nombre);
+        user.put("puntuacion",puntos);
+
+        // Add a new document with a generated ID
+        dbFire.collection("Jugadores")
+                .add(user)
+                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                    @Override
+                    public void onSuccess(DocumentReference documentReference) {
+                        Toast.makeText(getApplicationContext(),"Tus datos se agregaron a Firebase con exito :\") ",Toast.LENGTH_LONG).show();
+                       // Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                       // Log.w(TAG, "Error adding document", e);
+                        Toast.makeText(getApplicationContext(),"HA OCURRIDO UN ERROR SEVERO "+e.toString(),Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+
 
     public void PosicionarBalon (){
         try {
@@ -115,7 +172,14 @@ public class Juego extends AppCompatActivity {
             }
 
             public void onFinish() {
+                //////// agregando datos con Realm ////////
                 configView(puntuacion,usuario.getText().toString());
+
+                //////// agregando datos con SQLite ////////
+                agregarJugadorConSqlite(usuario.getText().toString(),puntuacion);
+
+                //////// agregando datos con FIREBASE ////////
+                agregarConFirebase(usuario.getText().toString(),puntuacion);
 
                 builder.setMessage("Tiempo terminado, tu puntuación: "+puntuacion+"\n¿Deseas volver a jugar?")
                         .setIcon(R.drawable.ic_balon)

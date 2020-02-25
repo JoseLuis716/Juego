@@ -24,6 +24,36 @@
 
     <LinearLayout
         android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        >
+
+        <Button
+            android:id="@+id/btnRealm"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Usando Realm"
+            android:layout_weight="1"
+            />
+        <Button
+            android:id="@+id/btnSQLite"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Usando SQLite"
+            android:layout_weight="1"
+            />
+        <Button
+            android:id="@+id/btnFirebase"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Usando Firestore"
+            android:layout_weight="1"
+            />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
         <ListView
